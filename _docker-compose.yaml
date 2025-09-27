@@ -1,0 +1,103 @@
+services:
+  keygen:
+    image: alpine:3.19
+    container_name: keygen
+    command: >
+      sh -c "apk add --no-cache openssl &&
+             test -f /shared/keyfile.key || openssl rand -base64 756 > /shared/keyfile.key &&
+             chmod 400 /shared/keyfile.key"
+    volumes:
+      - sharedconfig:/shared
+    networks:
+      - mongo-net
+
+  mongo-1:
+    image: mongo:8.0
+    container_name: mongo-1
+    hostname: mongo-1
+    depends_on:
+      - keygen
+    command: >
+      bash -c "chown mongodb:mongodb /data/keyfile.key &&
+               exec mongod --replSet rs0 --bind_ip_all --keyFile /data/keyfile.key"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: Abcd1234
+    volumes:
+      - mongo1data:/data/db
+      - mongo1config:/data/configdb
+      - sharedconfig:/data
+    ports:
+      - 21017:27017
+    networks:
+      - mongo-net
+    restart: unless-stopped
+
+  mongo-2:
+    image: mongo:8.0
+    container_name: mongo-2
+    hostname: mongo-2
+    depends_on:
+      - keygen
+      - mongo-1
+    command: >
+      bash -c "chown mongodb:mongodb /data/keyfile.key &&
+               exec mongod --replSet rs0 --bind_ip_all --keyFile /data/keyfile.key"
+    volumes:
+      - mongo2data:/data/db
+      - mongo2config:/data/configdb
+      - sharedconfig:/data
+    ports:
+      - 22017:27017
+    networks:
+      - mongo-net
+    restart: unless-stopped
+
+  mongo-3:
+    image: mongo:8.0
+    container_name: mongo-3
+    hostname: mongo-3
+    depends_on:
+      - keygen
+      - mongo-1
+    command: >
+      bash -c "chown mongodb:mongodb /data/keyfile.key &&
+               exec mongod --replSet rs0 --bind_ip_all --keyFile /data/keyfile.key"
+    volumes:
+      - mongo3data:/data/db
+      - mongo3config:/data/configdb
+      - sharedconfig:/data
+    ports:
+      - 23017:27017
+    networks:
+      - mongo-net
+    restart: unless-stopped
+
+  express:
+    image: mongo-express
+    container_name: express
+    depends_on:
+      - mongo-1
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://root:Abcd1234@mongo-1:27017/?replicaSet=rs0&authSource=admin
+      ME_CONFIG_BASICAUTH_ENABLED: true
+      ME_CONFIG_BASICAUTH_USERNAME: mongo
+      ME_CONFIG_BASICAUTH_PASSWORD: mongo
+    ports:
+      - 8081:8081
+    networks:
+      - mongo-net
+    restart: unless-stopped
+
+volumes:
+  mongo1data:
+  mongo1config:
+  mongo2data:
+  mongo2config:
+  mongo3data:
+  mongo3config:
+  sharedconfig:
+
+networks:
+  mongo-net:
+    driver: bridge

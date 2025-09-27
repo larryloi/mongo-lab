@@ -35,3 +35,7 @@ logs:
 
 shell:
 	docker compose exec $(CONTAINER_ARG) bash
+
+mongo.shell:
+	docker exec -it mongo-1 mongosh -u root -p Abcd1234 --authenticationDatabase admin 
+

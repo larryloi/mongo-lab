@@ -1,13 +1,40 @@
 
 ### Once MongoDB starts successfully:
 ```shell
-docker exec -it mongo mongosh -u root -p Abcd1234 --authenticationDatabase admin
+docker exec -it mongo-1 mongosh -u root -p Abcd1234 --authenticationDatabase admin
 ```
 
 ```javascript
 rs.initiate({
   _id: "rs0",
-  members: [{ _id: 0, host: "mongo:27017" }]
+  members: [{ _id: 0, host: "mongo-1:27017" }]
+})
+
+rs.initiate({
+  _id: "rs0",
+  members: [
+    { _id: 0, host: "mongo-1:27017" },
+    { _id: 1, host: "mongo-2:27017" },
+    { _id: 2, host: "mongo-3:27017" }
+  ]
+})
+
+rs.initiate({
+  _id: "rs0",
+  members: [
+    { _id: 0, host: "mongo-1:27017", priority: 1 },
+    { _id: 1, host: "mongo-2:27017", priority: 0.5 },
+    { _id: 2, host: "mongo-3:27017", priority: 0.5 }
+  ]
+})
+
+rs.initiate({
+  _id: "rs0",
+  members: [
+    { _id: 0, host: "db01.kaskade.local:21017" },
+    { _id: 1, host: "db01.kaskade.local:22017" },
+    { _id: 2, host: "db01.kaskade.local:23017" }
+  ]
 })
 ```
 
